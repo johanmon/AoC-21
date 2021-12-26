@@ -310,5 +310,31 @@ defmodule Adv do
     updateb(rest, mtx)
   end
 
+  ##==================================================================
+
+
+  def day6a() do
+    pop =  String.split( File.read!("day6.csv"), ",") |>
+      Enum.map(fn (nr) -> {n,_} = Integer.parse(nr); n end) |>
+      List.foldl({0,0,0,0,0,0,0,0,0}, fn (n, pop) -> update_pop(pop, n) end)
+    Tuple.sum(days(80, pop))
+  end
+
+  def update_pop(pop, n) do
+    :erlang.setelement(n+1, pop, elem(pop, n)+1)
+  end
+
+  def days(0, pop) do pop end
+  def days(n, {x0,x1,x2,x3,x4,x5,x6,x7,x8}) do
+    days(n-1, {x1,x2,x3,x4,x5,x6,x7+x0,x8,x0})
+  end
+
+
+  def day6a() do
+    pop =  String.split( File.read!("day6.csv"), ",") |>
+      Enum.map(fn (nr) -> {n,_} = Integer.parse(nr); n end) |>
+      List.foldl({0,0,0,0,0,0,0,0,0}, fn (n, pop) -> update_pop(pop, n) end)
+    Tuple.sum(days(256, pop))
+  end
 
 end
