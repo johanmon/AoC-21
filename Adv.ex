@@ -8,7 +8,6 @@ defmodule Adv do
 	{x, sum}
       end
     end
-
     {_, answer} = File.stream!("day1.csv") |>
       Stream.map( fn (r) -> {n, _} = Integer.parse(r); n end) |>
       Enum.reduce({:inf, 0}, count)
@@ -230,4 +229,86 @@ defmodule Adv do
     end
   end
   
+  ##==================================================================
+
+  def day5a() do
+    seq = String.split( File.read!("day5.csv"), "\n") |>
+      Enum.map(fn r ->
+	[from, to] = String.split(r, "-> ")
+	[x1,y1] = String.split(from, ",")
+	[x2,y2] =  String.split(to, ",")
+	{x1,_} = Integer.parse(x1)
+	{y1,_} = Integer.parse(y1)
+	{x2,_} = Integer.parse(x2)
+	{y2,_} = Integer.parse(y2)
+	{{x1,y1}, {x2,y2}}
+      end) |>
+      Enum.filter(fn ({{x1,y1}, {x2,y2}}) -> (x1 == x2) || (y1 == y2) end)
+    twos(update(seq, %{}))
+  end
+
+  def twos(mtx) do
+    List.foldl(Map.values(mtx), 0, fn (xv,a) -> List.foldl(Map.values(xv), a, fn (yv, a) -> if yv >= 2, do: a+1, else: a end) end)
+  end
+
+  def update([], mtx) do mtx end
+  def update([{{x1,y1}, {x1, y2}}|rest], mtx) do
+    mtx =  Map.update(mtx, x1,
+      Enum.reduce(y1..y2, %{}, fn(yi, mx) -> Map.put(mx, yi, 1) end),
+      fn (mx) ->
+	Enum.reduce(y1..y2, mx,
+	  fn (yi, my) ->
+	    Map.update(my, yi, 1,  fn (n) -> n+1 end)
+	  end)
+	end)
+    update(rest, mtx)
+  end
+  def update([{{x1,y1}, {x2, y1}}|rest], mtx) do
+    mtx = Enum.reduce(x1..x2, mtx, fn (xi, mx) ->
+	  Map.update(mx, xi, %{y1 => 1}, fn (my) ->
+	    Map.update(my, y1, 1, fn (n) -> n+1 end) end) end)
+    update(rest, mtx)
+  end
+
+  def day5b() do
+    seq = String.split( File.read!("day5.csv"), "\n") |>
+      Enum.map(fn r ->
+	[from, to] = String.split(r, "-> ")
+	[x1,y1] = String.split(from, ",")
+	[x2,y2] =  String.split(to, ",")
+	{x1,_} = Integer.parse(x1)
+	{y1,_} = Integer.parse(y1)
+	{x2,_} = Integer.parse(x2)
+	{y2,_} = Integer.parse(y2)
+	{{x1,y1}, {x2,y2}}
+      end)
+    twos(updateb(seq, %{}))
+  end
+
+  def updateb([], mtx) do mtx end
+  def updateb([{{x1,y1}, {x1, y2}}|rest], mtx) do
+    mtx =  Map.update(mtx, x1,
+      Enum.reduce(y1..y2, %{}, fn(yi, mx) -> Map.put(mx, yi, 1) end),
+      fn (mx) ->
+	Enum.reduce(y1..y2, mx,
+	  fn (yi, my) ->
+	    Map.update(my, yi, 1,  fn (n) -> n+1 end)
+	  end)
+	end)
+    updateb(rest, mtx)
+  end
+  def updateb([{{x1,y1}, {x2, y1}}|rest], mtx) do
+    mtx = Enum.reduce(x1..x2, mtx, fn (xi, mx) ->
+	  Map.update(mx, xi, %{y1 => 1}, fn (my) ->
+	    Map.update(my, y1, 1, fn (n) -> n+1 end) end) end)
+    updateb(rest, mtx)
+  end
+  def updateb([{{x1,y1}, {x2, y2}}|rest], mtx) do
+    mtx = List.foldl( Enum.zip(x1..x2, y1..y2), mtx, fn ({xi,yi}, m) ->
+      Map.update(m, xi, %{yi => 1}, fn (my) ->
+	Map.update(my, yi, 1, fn (n) -> n+1 end) end) end)
+    updateb(rest, mtx)
+  end
+
+
 end
