@@ -330,11 +330,33 @@ defmodule Adv do
   end
 
 
-  def day6a() do
+  def day6b() do
     pop =  String.split( File.read!("day6.csv"), ",") |>
       Enum.map(fn (nr) -> {n,_} = Integer.parse(nr); n end) |>
       List.foldl({0,0,0,0,0,0,0,0,0}, fn (n, pop) -> update_pop(pop, n) end)
     Tuple.sum(days(256, pop))
+  end
+
+  ##==================================================================
+
+
+  def day7a() do
+    seq =  String.split( File.read!("day7.csv"), ",") |>
+      Enum.map(fn (nr) -> {n,_} = Integer.parse(nr); n end)
+    {mi,mx} = List.foldl(seq, {:inf,0}, fn (k,{mi,mx}) -> {min(k,mi),max(k,mx)} end)
+    List.foldl( Enum.map(mi..mx, fn (m) -> List.foldl(seq, 0, fn(k, a) -> a + abs(k-m) end) end),
+      :inf,
+      fn (d,mn) -> min(d,mn) end)
+  end
+
+
+  def day7b() do
+    seq =  String.split( File.read!("day7.csv"), ",") |>
+      Enum.map(fn (nr) -> {n,_} = Integer.parse(nr); n end)
+    {mi,mx} = List.foldl(seq, {:inf,0}, fn (k,{mi,mx}) -> {min(k,mi),max(k,mx)} end)
+    List.foldl( Enum.map(mi..mx, fn (m) -> List.foldl(seq, 0, fn(k, a) -> d = abs(k-m); a + trunc((d+1) * (d/2))  end) end),
+      :inf,
+      fn (d,mn) -> min(d,mn) end)
   end
 
 end
