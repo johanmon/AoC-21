@@ -183,7 +183,7 @@ defmodule Adv do
   # count the columns as well since all squares occur twice).
 
   def score([r1,r2,r3,r4,r5|_], n) do
-    List.foldl([r1,r2,r3,r4,r5], 0, fn (r,a) -> List.foldl(r, a,  fn(a,x) -> a + x end) end) * n
+    List.foldl([r1,r2,r3,r4,r5], 0, fn (r,a) -> Enum.sum(r) + a end) * n
   end
 
   # So, now it is time to play. Call a number and filter the boards that
@@ -316,11 +316,11 @@ defmodule Adv do
   def day6a() do
     pop =  String.split( File.read!("day6.csv"), ",") |>
       Enum.map(fn (nr) -> {n,_} = Integer.parse(nr); n end) |>
-      List.foldl({0,0,0,0,0,0,0,0,0}, fn (n, pop) -> update_pop(pop, n) end)
+      List.foldl({0,0,0,0,0,0,0,0,0}, fn (n, pop) -> update_elem(pop, n) end)
     Tuple.sum(days(80, pop))
   end
 
-  def update_pop(pop, n) do
+  def update_elem(pop, n) do
     :erlang.setelement(n+1, pop, elem(pop, n)+1)
   end
 
@@ -333,7 +333,7 @@ defmodule Adv do
   def day6b() do
     pop =  String.split( File.read!("day6.csv"), ",") |>
       Enum.map(fn (nr) -> {n,_} = Integer.parse(nr); n end) |>
-      List.foldl({0,0,0,0,0,0,0,0,0}, fn (n, pop) -> update_pop(pop, n) end)
+      List.foldl({0,0,0,0,0,0,0,0,0}, fn (n, pop) -> update_elem(pop, n) end)
     Tuple.sum(days(256, pop))
   end
 
@@ -359,4 +359,72 @@ defmodule Adv do
       fn (d,mn) -> min(d,mn) end)
   end
 
+  ##==================================================================
+
+  def day8a() do
+    File.stream!("day8.csv") |>
+      Enum.map(fn(row) ->
+	[signals, displays] = String.split(String.trim(row,"\n"), " | ")
+	signals = String.split(signals, " ")
+	 displays = String.split(displays, " ")
+	{signals, displays}
+      end) |>
+      List.foldl({0,0,0,0,0,0,0,0}, fn({_,displ}, count) ->
+	List.foldl(displ, count, fn(dis, cnt) -> update_elem(cnt, String.length(dis)) end) end)
+  end
+
+  def day8b() do
+    File.stream!("day8.csv") |>
+      Enum.map(fn(row) ->
+	[signals, displays] = String.split(String.trim(row,"\n"), " | ")
+	signals = String.split(signals, " ")
+	 displays = String.split(displays, " ")
+	{signals, displays}
+      end) |>
+      List.foldl(0, fn({nrs, displ}, sum) -> decode(displ, table(nrs)) + sum end)
+  end
+
+  def table(nrs) do
+    nrs = Enum.map(nrs, fn(nr) -> code = Enum.sort(String.to_charlist(nr)); {length(code), code} end)
+
+    ## We only need to know what the numbers look like.
+    {[{_,one}], rest} =  Enum.split_with(nrs, fn({n,_}) -> n == 2 end)
+    {[{_,seven}], rest} = Enum.split_with(rest, fn({n,_}) -> n == 3 end)
+    {[{_,four}], rest} = Enum.split_with(rest, fn({n,_}) -> n == 4 end)
+    {[{_,eight}], rest} = Enum.split_with(rest, fn({n,_}) -> n == 7 end)
+
+    ## Then there are 0-6-9 and 2-3-5
+    {[{_,n1},{_,n2},{_,n3}], [{_,m1},{_,m2},{_,m3}]} = Enum.split_with(rest, fn({n,_}) -> n == 6 end)
+
+    ## 9 is the only one that overlaps 4
+    {[nine], zero_six} =  Enum.split_with([n1,n2,n3], fn(nr) -> Enum.all?(four, fn(c) -> Enum.member?(nr,c) end) end)
+
+    ## 0 overlaps 1
+    {[zero], [six]} =  Enum.split_with(zero_six, fn(nr) -> Enum.all?(one, fn(c) -> Enum.member?(nr,c) end) end)
+
+    ## 3 overlaps 1
+    {[three], [r1,r2]} =  Enum.split_with([m1,m2,m3], fn(nr) -> Enum.all?(one, fn(c) -> Enum.member?(nr,c) end) end)
+
+
+    #  5 almost overlap 4 (3 out of 4),  2 only overlaps 4 by 2 
+    {[two], [five]} =  if length( Enum.filter(r1, fn(c) -> Enum.member?(four,c) end) ) == 3 do
+                           {[r2],[r1]}
+                       else
+                          {[r1],[r2]}
+                       end
+
+    [zero, one, two, three, four, five, six, seven, eight, nine]
+  end
+
+  def decode(displ, table) do
+    displ = Enum.map(displ, fn(ds) -> code = Enum.sort(String.to_charlist(ds));  code  end)
+
+    [d1,d2,d3,d4] =  Enum.map(displ, fn(ds) -> lookup(ds, 0, table) end)
+  
+    d1*1000 + d2*100 + d3*10 + d4    
+  end
+
+  def lookup(ds, n, [ds|_]) do n end
+  def lookup(ds, n, [_|rest]) do lookup(ds, n+1, rest) end  
+  
 end
