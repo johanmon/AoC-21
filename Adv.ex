@@ -426,5 +426,43 @@ defmodule Adv do
 
   def lookup(ds, n, [ds|_]) do n end
   def lookup(ds, n, [_|rest]) do lookup(ds, n+1, rest) end  
+
+
+
+  ##==================================================================
+
+  def day9a() do
+    seq = File.stream!("day9.csv") |>
+      Enum.map(fn(row) ->   [:inf | depth(row)  ++ [:inf]] end)
+    inf = List.duplicate(:inf, length(hd(seq)))
+    seq = [ inf | seq ++ [inf]]
+    scan(seq, 0) 
+  end
+
+  def depth(<<>>) do [] end
+  def depth(<<10>>) do [] end  
+  def depth(<<c, rest::binary>>) do [c-48|depth(rest)] end  
+  
+  def scan([_,_], danger) do danger end
+  def scan([north, this, south | rest], danger) do
+    dgr = scan(north, this, south, 0)
+    scan([this, south | rest], danger + dgr)
+  end
+
+  def scan([_,_], [_,_], [_,_], danger) do danger end
+  def scan(
+    [ _, n, ne | rn],
+    [ w, t,  e | rt],
+    [ _, s, se | rs],  danger) do 
+    d = if (t < n) && (t < s) && (t < w) && (t < e) do
+      t + 1
+    else
+      0
+    end
+    scan([n,ne|rn], [t,e|rt], [s,se|rs], danger + d)
+  end
+
+  
+
   
 end
