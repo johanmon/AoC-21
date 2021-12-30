@@ -451,18 +451,119 @@ defmodule Adv do
 
   def scan([_,_], [_,_], [_,_], danger) do danger end
   def scan(
-    [ _, n, ne | rn],
+    [ _, n | rn],
     [ w, t,  e | rt],
-    [ _, s, se | rs],  danger) do 
+    [ _, s | rs],  danger) do 
     d = if (t < n) && (t < s) && (t < w) && (t < e) do
       t + 1
     else
       0
     end
-    scan([n,ne|rn], [t,e|rt], [s,se|rs], danger + d)
+    scan([n|rn], [t,e|rt], [s|rs], danger + d)
   end
 
+  def day9b() do
+    {seq,_} = File.stream!("day9.csv") |>
+      Enum.map_reduce(1, fn (row, a) -> { [{:na, :inf}|( depth(row,a,1) ++ [{:na,:inf}])],a+1} end)
+
+    inf = List.duplicate({:na, :inf}, length(hd(seq)))
+    seq = [ inf | seq ++ [inf]]
+
+    ## We now have a map with :inf squares surrounding the regular
+    ## map.
+
+    ## We now build a graph where each square has a set of edges to
+    ## squares with higher or equal values. Squares width height 9 or
+    ## :inf are not included in the graph.
+
+    ## In the process, the low points are identified. 
+    {graph, low} = scanb(seq, %{}, [])
+
+    ## We know (take for granted) that no square belongs to two
+    ## basins. This is not clearly stated but since we do not have any
+    ## rules on how to treat a situation when a sqaure borders two
+    ## basins.
+
+    ## For each of the low points, calculate the area of the basin
+    ## given the graph. 
+
+    {sizes, _} = List.foldl(low, {[],graph}, fn(l, {a,g}) -> {s,g} = basin([l], 0, g); {a++[s],g} end)
+
+    List.to_tuple(Enum.take(Enum.sort(sizes, &>/2), 3))
+  end
+
+  ## The area of the basin is calculated recusivly given a list of
+  ## squares left to evaluate. If the list is empty we are done
+  ## otherwise we pick the first squre and remove it from the graph
+  ## (we do not want to double count) and evaluate the area of the
+  ## basin starting in this square.
+
+  ## Since the graph is directed and only have vertices leading to
+  ## higher (or equal) squares we will eventually reach sqaures with
+  ## no higher neighbours. Remember that the ridges of height 9 are
+  ## not included in the graph.
   
+  def basin([], s, g) do {s, g} end
+  def basin([x|rest], s, g) do
+    case Map.pop(g, x, :no) do
+      {:no, g} ->
+	## This is a case where we stumble on the same square twice. 
+	basin(rest, s, g)
+      {more, g} ->
+	{s, g} = basin(more, s, g)
+	basin(rest, s+1, g)	
+    end
+  end
+
+  ## All squares are given a unique {i,j} name that can later be used
+  ## when building the graph. Usning the index (i,j) is not important,
+  ## we only need a unique key.
+  
+  def depth(<<>>,_,_) do [] end
+  def depth(<<10>>,_,_) do [] end  
+  def depth(<<c, rest::binary>>, i,j) do [{{i,j},c-48}|depth(rest, i,j+1)] end  
+
+
+  ## The map is scanned with a sliding three by three kernel.  The
+  ## dummy rows (with all :inf) as well as the dummy first and last
+  ## elements in each row allows us to do this without special cases.
+  
+  def scanb([_,_], graph, low) do {graph, low} end
+  def scanb([north | [this, south | _] = rest] , graph, low) do
+    {graph, low} = scanb(north, this, south, graph, low)
+    scanb(rest, graph, low)
+  end
+  
+  def scanb([_,_], [_,_], [_,_], graph, low) do {graph,low} end
+  def scanb([_,n,ne|rn], [_,{_,9}=t,e|rt],[_,s,se|rs], graph, low) do 
+    ## We skip squares of height 9 since they will not be part of any
+    ## basin.
+    scanb([n,ne|rn], [t,e|rt], [s,se|rs], graph, low)
+  end
+  def scanb(
+    ##  Select the nort, west, east and south neighbours.
+    [ _  | [   n | _] = rn],
+    [ w  | [{ti,td},  e | _] = rt],
+    [ _  | [   s | _] = rs],  graph, low) do 
+
+    ##  Filter out the higher or equal.
+    higher =  Enum.filter([n,w,e,s], fn({_,d}) -> d >= td end)
+
+    ##  If all four are strictly higher we have a low point. 
+    low = if length(Enum.filter(higher, fn({_,d}) -> d > td end)) == 4 do
+      [ti|low]
+    else
+      low
+    end
+
+    ## The basin of the square are those squares that are higher or equal, not
+    ## including 9 nor :inf. 
+
+    basin = List.foldl(higher, [], fn({pos, depth}, a) -> if (depth != :inf) && (depth != 9), do: [pos|a], else: a end)
+
+    scanb(rn, rt, rs, Map.put(graph, ti, basin), low)
+  end
+    
 
   
 end
