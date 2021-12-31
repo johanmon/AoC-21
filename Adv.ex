@@ -564,6 +564,84 @@ defmodule Adv do
     scanb(rn, rt, rs, Map.put(graph, ti, basin), low)
   end
     
+  ##==================================================================
+
+  def day10a() do
+    seq = File.stream!("day10.csv") |>
+      Enum.map(fn(row) -> parse(String.trim(row, "\n")) end)
+    score(seq)
+  end
+
+  def score(seq) do
+    List.foldl(seq, 0, fn (res, a) ->
+      a + case res do
+	    {:error, ?), _} -> 3
+            {:error, ?], _} -> 57
+            {:error, ?}, _} -> 1197
+	    {:error, ?>, _} -> 25137
+            {:incmpl, _}  -> 0
+            :ok -> 0
+          end			      
+      end)      
+  end
+  
+  def parse(<<>>) do {:ok, <<>>} end
+  def parse(<<open, rest::binary>>) do  
+    case close(rest, closer(open), []) do
+      {:ok, rest} ->
+	parse(rest)
+      error ->
+	error
+    end
+  end
+
+  def close(<<>>, c, incmpl) do {:incmpl, [c|incmpl]} end
+  def close(<<c, rest::binary>>, c, _) do {:ok, rest} end
+  def close(<<?>, _::binary>>, c, _) do {:error, ?>, c} end
+  def close(<<?), _::binary>>, c, _) do {:error, ?), c} end
+  def close(<<?}, _::binary>>, c, _) do {:error, ?}, c} end
+  def close(<<?], _::binary>>, c, _) do {:error, ?], c} end
+
+  def close(<<open, rest::binary>>, c, incmpl) do
+       case close(rest,closer(open), [c|incmpl]) do
+         {:ok, rest} ->
+           close(rest,c, incmpl)
+         error ->
+           error
+       end
+  end
+
+  def closer(?<) do ?> end
+  def closer(?{) do ?} end
+  def closer(?() do ?) end
+  def closer(?[) do ?] end
+
+  def day10b() do
+    seq = File.stream!("day10.csv") |>
+      Enum.map(fn(row) -> parse(String.trim(row, "\n")) end) |>
+        Enum.filter(fn(res) -> case res do
+				 {:incmpl,_} -> true
+				 _ -> false
+				 end end)
+    Enum.fetch(Enum.sort(scoreb(seq)), trunc(length(seq)/2))
+  end
+
+  def scoreb(seq) do
+    Enum.map(seq, fn (res) ->
+        case res do
+	    {:error, _, _} -> 0
+            {:incmpl, missing}  -> List.foldl(missing, 0, fn(c,a) ->
+                                       a*5 + case c do
+						?) -> 1
+						?] -> 2
+						?} -> 3
+						?> -> 4
+					     end
+                                        end)
+	     :ok -> 0
+          end			      
+      end)      
+  end
+end
 
   
-end
